@@ -1,7 +1,8 @@
-#include<Windows.h>
-#include<iostream>
-#include<fstream>
+#include <Windows.h>
+#include <iostream>
+#include <fstream>
 #include <direct.h>
+#include <exception>
 
 using namespace std;
 
@@ -28,6 +29,7 @@ void CallProcess(char* commandLine)
     ) 
     {
         printf( "CreateProcess failed (%d).\n", GetLastError() );
+		throw exception();
         return;
     }
 
@@ -39,7 +41,7 @@ void CallProcess(char* commandLine)
     CloseHandle( pi.hThread );
 }
 
-char* CreateCommandLine(const char* name, char** params, int size)
+char* CreateCommandLine(const char* name, string params[], int size)
 {
     string commandLine(name);
     for (int i = 0; i < size; i++)
@@ -49,33 +51,35 @@ char* CreateCommandLine(const char* name, char** params, int size)
 
 int main(int argc, char* argv[])
 {
+	TCHAR creatorExe[256];
+	TCHAR reporterExe[256];
+	GetCurrentDirectory(256, creatorExe);
+	GetCurrentDirectory(256, reporterExe);
+	strcat(creatorExe, "\\Creator.exe");
+	strcat(reporterExe, "\\Reporter.exe");
+
+	
 	cout << "Enter binary file name\n";
-	char name[20];
-	char entries[20];
+	string name;
+	cin >> name;
+	cout << "Enter number of entries\n";
+	string entries;
+	cin >> entries;
+
+
+	string creatorParams[2]; creatorParams[0] = name; creatorParams[1] = entries;
+	char* CreatorCommandLine = CreateCommandLine(creatorExe, creatorParams, 2);
+
 	try{
-        cin.getline(name, 20);
+		CallProcess(CreatorCommandLine);
 	}
-	catch(...){
-		cerr << "Exception in name\n";
+	catch(exception& e){
 		return 1;
 	}
-	cout << "Enter amount of entries\n";
-	try{
-        cin >> entries;
-	}
-	catch(...){
-		cerr << "Exception in entries\n";
-		return 1;
-	}
-
-	char** creatorParams = new char*[2]; creatorParams[0] = name; creatorParams[1] = entries;
-	char* CreatorCommandLine = CreateCommandLine("Creator.exe", creatorParams, 2);
-
-	CallProcess(CreatorCommandLine);
 	
 	ifstream creator;
     try{
-        creator.open(name);
+        creator.open(name.c_str());
     }
     catch(...){
         cerr << "Something went wrong with opening creator file" << '\n';
@@ -89,29 +93,27 @@ int main(int argc, char* argv[])
     cout << '\n';
 	creator.close();
 
-	char** reporterParams = new char*[3]; 
+	string reporterParams[3];
 	reporterParams[0] = name; 
-	char perHour[10];
-	char file[20];
-	try {
-		cout << "Enter report file name\n";
-        cin >> file;
-		reporterParams[1] = file;
-		cout << "Enter pay per hour\n";
-		cin >> perHour;
-		reporterParams[2] = perHour;
+	cout << "Enter report file name\n";
+	string file; 
+	cin >> file;
+	reporterParams[1] = file;
+	cout << "Enter pay per hour\n";
+	cin >> reporterParams[2];
+
+	char* ReporterCommandLine = CreateCommandLine(reporterExe, reporterParams, 3);
+	
+	try{
+		CallProcess(ReporterCommandLine);
 	}
-	catch(...){
-        cout << "Exception in reporter params\n";
+	catch(exception& e){
 		return 1;
 	}
-	char* ReporterCommandLine = CreateCommandLine("Reporter.exe", reporterParams, 3);
-	
-	CallProcess(ReporterCommandLine);
 		
 	ifstream report;
     try{
-        report.open(file);
+        report.open(file.c_str());
     }
     catch(...){
         cerr << "Something went wrong with opening reporter file\n";
