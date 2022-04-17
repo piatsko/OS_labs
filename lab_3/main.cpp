@@ -25,18 +25,12 @@ vector<HANDLE> start_threads(int count){
     return threads_handles;
 }
 
-bool getBoolArrValue(vector<bool>& v){
-    bool answ = 1;
-    for (int i = 0; i < v.size(); i++)
-        if (isActive[i])
-            answ &= v[i];
-    return answ;
-}
-
-void setIsLocked(vector<bool>& v){
-    for (int i = 0; i < v.size(); i++)
-        if (isActive[i])
-            v[i] = 0;
+HANDLE* CreateEvents(int count, bool manualReset, bool initialState){
+    HANDLE* events = new HANDLE[count];
+    for (int i = 0; i < count; i++){
+        events[i] = CreateEventA(NULL, manualReset, initialState, NULL);
+    }
+    return events;
 }
 
 void print(vector<int>& v){
@@ -45,7 +39,15 @@ void print(vector<int>& v){
     cout << endl;
 }
 
+void SetRemovedEvents(vector<HANDLE>& removedEvents){
+    for (int i = 0; i < removedEvents.size(); i++){
+        SetEvent(removedEvents[i]);
+    }
+}
+
 int main() {
+
+    InitializeCriticalSection(&workingWithArray);
 
     cout << "Enter array size: ";
     int arr_size; cin >> arr_size;
@@ -54,24 +56,26 @@ int main() {
     cout << "Enter markers count: ";
     int marker_count; cin >> marker_count;
 
-    isLocked = vector<bool>(marker_count, 0);
-    isActive = vector<bool>(marker_count, 1);
-    vector<bool> isClosed(marker_count, 0);
-
+    markedEvents = CreateEvents(marker_count, FALSE, FALSE);
+    continueEvent = CreateEventA(NULL, TRUE, FALSE, NULL);
+    closeThreadEvents = CreateEvents(marker_count, TRUE, FALSE);
     vector<HANDLE> threads_handles = start_threads(marker_count);
 
-    while (!getBoolArrValue(isClosed)){
-        while (!getBoolArrValue(isLocked));
+    vector<HANDLE> removedMarkedEvents;
 
+    int active_markers = marker_count;
+    while (active_markers != 0){
+        SetRemovedEvents(removedMarkedEvents);
+        WaitForMultipleObjects(marker_count, markedEvents, TRUE, INFINITE);
         print(array);
 
         cout << "Enter # of marker to be closed: " << endl;
         int num; cin >> num;
-        isActive[num - 1] = 0;
-        isClosed[num - 1] = 1;
+        SetEvent(closeThreadEvents[num - 1]);
         WaitForSingleObject(threads_handles[num - 1], INFINITE);
-
-        setIsLocked(isLocked);
+        removedMarkedEvents.push_back(markedEvents[num - 1]);
+        active_markers--;
+        PulseEvent(continueEvent);
     }
 
     cout << "RESULT ARRAY" << endl;
