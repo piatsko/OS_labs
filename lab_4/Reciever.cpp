@@ -54,6 +54,11 @@ HANDLE* CreateSenderStartEvents(int sendersCount)
     return startEvents;
 }
 
+void FreeSenderStartEvents(HANDLE* senderStartEvents)
+{
+	delete[] senderStartEvents;
+}
+
 int main()
 {
     cout << "Enter binary file name:\n";
@@ -115,7 +120,7 @@ int main()
         CloseHandle(senderStartEvents[i]);
     }
 
-    delete [] senderStartEvents;
+	FreeSenderStartEvents(senderStartEvents);
     CloseHandle(fileWriteSemaphore);
     CloseHandle(fileReadSemaphore);
 }

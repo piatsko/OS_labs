@@ -16,7 +16,7 @@ wstring ConvertIntToWstring(int i){
 struct Message{
     Message(){}
 
-    Message(string s){
+    Message(const string& s){
         strcpy(mes, s.c_str());
     }
 
